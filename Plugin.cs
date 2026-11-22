@@ -24,6 +24,7 @@ public class Plugin : BasePlugin {
         AddComponent<ModResetBypass>();
         AddComponent<ModReuseLastShot>();
         AddComponent<ModHoleInOneBruteforcer>();
+        AddComponent<ModPowerAngleDisplay>();
 
         // Patches
         Harmony.CreateAndPatchAll(typeof(CheckForBallHitPatch));

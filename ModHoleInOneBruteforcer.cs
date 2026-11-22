@@ -30,8 +30,11 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
                     // If in hole, set winner and cleanup
                     if (IsGhostBallInHole(ghosts[i].GhostBall)) {
                         winner = ghosts[i];
-                        // cleanup but i'm lazy
                         initialized = false;
+                        for (int j=0; j<120; j++) {
+                            Destroy(ghosts[i].GhostBall);
+                        }
+                        break;
                     }
 
                     // If idle, reset and shoot again with more power (first trying 16ths)
