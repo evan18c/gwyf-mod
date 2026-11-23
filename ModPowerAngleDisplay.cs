@@ -17,9 +17,12 @@ public class ModPowerAngleDisplay : MonoBehaviour {
     }
 
     static void DrawWindow(int id) {
+        
         float Power = Services.GameState.CurrentState.Cast<GameplayGameState>().m_PrimaryUser.m_hitForce;
-        float Angle = Mathf.Acos(Services.GameState.CurrentState.Cast<GameplayGameState>().m_PrimaryUser.PlayerCamera.transform.forward.x) * Mathf.Rad2Deg;
         GUILayout.Label("Power: " + Power.ToString());
+
+        Vector3 forward = Services.GameState.CurrentState.Cast<GameplayGameState>().m_PrimaryUser.PlayerCamera.transform.forward;
+        float Angle = (Mathf.Atan2(forward.z, forward.x) * Mathf.Rad2Deg + 360.0f) % 360.0f;
         GUILayout.Label("Angle: " + Angle.ToString());
         GUI.DragWindow(new Rect(0, 0, 250, 20));
     }
