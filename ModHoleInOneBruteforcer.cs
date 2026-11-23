@@ -32,7 +32,7 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
                         winner = ghosts[i];
                         initialized = false;
                         for (int j=0; j<120; j++) {
-                            Destroy(ghosts[i].GhostBall);
+                            Destroy(ghosts[j].GhostBall);
                         }
                         break;
                     }
@@ -79,12 +79,14 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
         for (int i=0; i<120; i++) {
             ghosts[i] = new GhostBallManager(CreateGhostBall(), 0.0f, 3.0f * i);
         }
-        holes = FindObjectsOfType<GameObject>().Where<GameObject>(obj => obj.name.Contains("Holedetector")).ToArray<GameObject>();
+        holes = GameObject.FindGameObjectsWithTag("Hole").ToArray<GameObject>();
         resetPosition = Services.GameState.CurrentState.Cast<GameplayGameState>().m_PrimaryUser.Ball.gameObject.transform.position;
+        winner = null;
         initialized = true;
     }
 
     // Creates a GhostBall
+    // TODO: Create a new ball instead of cloning the player's
     static GameObject CreateGhostBall() {
 
         // Inactive parent
@@ -109,7 +111,7 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
     }
 
     // Shoots a GhostBall
-    // Found through Ghidra
+    // void BallMovement$$CheckForBallHit(BallMovement_o *__this,MethodInfo *method)
     static void ShootGhostBall(GameObject ghost, float power, float angle) {
 
         // Components
@@ -120,11 +122,18 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
         rb.angularDrag = 1.0f;
         rb.drag = bm.initialDrag + bm.m_environmentalDragToApply;
 
+        // Calculate magnitude
+        // ((pUVar29->fields).m_hitForce - (pTVar16->fields).m_value) * (1.0 / ((pTVar15->fields).m_value - (pTVar16->fields).m_value))
+        // ((pUVar29->fields).m_hitForce is power
+        // (pTVar16->fields).m_value) is minForce, can be 0
+        // (pTVar15->fields).m_value is maxForce, can be 10500
+        float magnitude = power * bm.m_PowerCurve.Evaluate( (power - 0.0f) * (1.0f / (10500.0f - 0.0f)) );
+
         // Shot
         Vector3 force = new Vector3(0.0f, 0.0f, 0.0f);
         force.x = Mathf.Cos(angle * Mathf.Deg2Rad);
         force.z = Mathf.Sin(angle * Mathf.Deg2Rad);
-        force *= power + 1.0f;
+        force *= magnitude + 1.0f;
         rb.AddForce(force, ForceMode.Force);
     }
 
