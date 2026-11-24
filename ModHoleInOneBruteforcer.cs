@@ -42,6 +42,16 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
                         if (ghosts[i].Power <= 10500.0f) {
                             ShootGhostBall(ghosts[i].GhostBall, ghosts[i].Power, ghosts[i].Angle);
                             totalShots++;
+
+                            // we ran out
+                            if (totalShots == maxShots) {
+                                for (int j=0; j<120; j++) {
+                                    Destroy(ghosts[j].GhostBall);
+                                }
+                                initialized = false;
+                                break;
+                            }
+
                         } else {
                             // this angle failed, do nothing for now
                         }
@@ -68,7 +78,7 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
     }
 
     static void DrawWindow(int id) {
-        if (!initialized && GUILayout.Button("Initialize")) {
+        if (!initialized && GUILayout.Button("Search")) {
             Initialize();
         }
         if (initialized) {
@@ -78,6 +88,9 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
             GUILayout.Label("Winner found!");
             GUILayout.Label($"Power: {winner.Power}");
             GUILayout.Label($"Angle: {winner.Angle}");
+            if (GUILayout.Button("Showcase")) {
+                ModReuseLastShot.Shoot(winner.Power, new Vector3(Mathf.Cos(winner.Angle * Mathf.Deg2Rad), 0.0f, Mathf.Sin(winner.Angle * Mathf.Deg2Rad)));
+            }
         }
         GUI.DragWindow(new Rect(0, 0, 250, 20));
     }
