@@ -42,8 +42,7 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
                         if (ghosts[i].Power <= 10500.0f) {
                             ShootGhostBall(ghosts[i].GhostBall, ghosts[i].Power, ghosts[i].Angle);
                             totalShots++;
-
-                            // we ran out
+                        } else {
                             if (totalShots == maxShots) {
                                 for (int j=0; j<120; j++) {
                                     Destroy(ghosts[j].GhostBall);
@@ -51,9 +50,6 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
                                 initialized = false;
                                 break;
                             }
-
-                        } else {
-                            // this angle failed, do nothing for now
                         }
                     }
                 }
@@ -142,10 +138,15 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
     }
 
     // Shoots a GhostBall
+    // NOTE: When this function shoots, take note of animation frame of all objects in the world to recreate it.
     static void ShootGhostBall(GameObject ghost, float power, float angle) {
 
-        // Rigidbody
+        // Components
         Rigidbody rb = ghost.GetComponent<Rigidbody>();
+        SphereCollider sc = ghost.GetComponent<SphereCollider>();
+
+        // Contact Offset
+        sc.contactOffset = 0.000005f;
 
         // Angular Drag
         rb.angularDrag = 1.0f;
@@ -162,15 +163,21 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
     }
 
     // Updates a GhostBall
+    // TODO: If the ball collides with a reset trigger, flag it for reset.
     static void UpdateGhostBall(GameObject ghost) {
         
         // Components
         Rigidbody rb = ghost.GetComponent<Rigidbody>();
+        SphereCollider sc = ghost.GetComponent<SphereCollider>();
 
         // Angular Drag Update
         float speed = rb.velocity.magnitude;
         if (speed <= 1.0f) {
             rb.angularDrag = (1.0f - speed) * (1.0f - speed) * 40.0f;
+            sc.contactOffset = 0.0005f;
+        } else {
+            rb.angularDrag = 1.0f;
+            sc.contactOffset = 0.000005f;
         }
     }
 
