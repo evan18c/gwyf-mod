@@ -10,41 +10,59 @@ namespace MyFirstPlugin;
 public class ModHoleInOneBruteforcer : MonoBehaviour {
     public ModHoleInOneBruteforcer(IntPtr ptr) : base(ptr) {}
 
-    // Private Static Variables
+    // Mod
     private static bool initialized = false;
-    private static Rect windowRect = new Rect(400, 600, 250, 150);
-    private static GhostBallManager[] ghosts = new GhostBallManager[120];
-    private static GameObject[] holes;
-    private static GhostBallManager winner = null;
+    private static Rect windowRect = new Rect(400, 600, 250, 600);
+
+    // Objects
+    private static GhostBallManager[] ghosts;
     private static Vector3 resetPosition;
+    private static GameObject[] holes;
+
+    // Results
+    private static GhostBallManager winner = null;
     private static int totalShots;
     private static int maxShots;
+
+    // Config Fields
+    private static string totalGhostsField = "120";
+    private static string minAngleField = "0";
+    private static string maxAngleField = "360";
+    private static string powerStepsField = "16";
+
+    // Config
+    private static int totalGhosts = 120;
+    private static float minAngle = 0;
+    private static float maxAngle = 360;
+    private static int powerSteps = 16;
 
     void Update() {
         if (State.isInGame) {
             if (initialized) {
-                for (int i=0; i<120; i++) {
+                for (int i=0; i<totalGhosts; i++) {
 
                     // If in hole, set winner and cleanup
-                    if (IsGhostBallInHole(ghosts[i].GhostBall)) {
+                    if (IsGhostBallInHole(ghosts[i])) {
                         winner = ghosts[i];
                         initialized = false;
-                        for (int j=0; j<120; j++) {
+                        for (int j=0; j<totalGhosts; j++) {
                             Destroy(ghosts[j].GhostBall);
                         }
                         break;
                     }
 
                     // If idle, reset and shoot again with more power (first trying 16ths)
-                    if (IsGhostBallIdle(ghosts[i].GhostBall)) {
+                    if (IsGhostBallIdle(ghosts[i])) {
                         ghosts[i].GhostBall.transform.position = resetPosition;
-                        ghosts[i].Power += 10500.0f / 16.0f;
+                        ghosts[i].Power += 10500.0f / (float)powerSteps;
+                        ghosts[i].rb.velocity = Vector3.zero;
+                        ghosts[i].rb.angularVelocity = Vector3.zero;
                         if (ghosts[i].Power <= 10500.0f) {
-                            ShootGhostBall(ghosts[i].GhostBall, ghosts[i].Power, ghosts[i].Angle);
+                            ShootGhostBall(ghosts[i], ghosts[i].Power, ghosts[i].Angle);
                             totalShots++;
                         } else {
                             if (totalShots == maxShots) {
-                                for (int j=0; j<120; j++) {
+                                for (int j=0; j<totalGhosts; j++) {
                                     Destroy(ghosts[j].GhostBall);
                                 }
                                 initialized = false;
@@ -61,8 +79,8 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
 
     void FixedUpdate() {
         if (State.isInGame && initialized) {
-            for (int i=0; i<120; i++) {
-                UpdateGhostBall(ghosts[i].GhostBall);
+            for (int i=0; i<totalGhosts; i++) {
+                UpdateGhostBall(ghosts[i]);
             }
         }
     }
@@ -74,11 +92,31 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
     }
 
     static void DrawWindow(int id) {
+        if (!initialized) {
+            GUILayout.Label("Total Ghosts:");
+            totalGhostsField = GUILayout.TextField(totalGhostsField);
+            GUILayout.Label("Angle Bound Min:");
+            minAngleField = GUILayout.TextField(minAngleField);
+            GUILayout.Label("Angle Bound Max:");
+            maxAngleField = GUILayout.TextField(maxAngleField);
+            GUILayout.Label("Power Steps:");
+            powerStepsField = GUILayout.TextField(powerStepsField);
+        }
         if (!initialized && GUILayout.Button("Search")) {
+            totalGhosts = int.Parse(totalGhostsField);
+            minAngle = float.Parse(minAngleField);
+            maxAngle = float.Parse(maxAngleField);
+            powerSteps = int.Parse(powerStepsField);
             Initialize();
         }
         if (initialized) {
             GUILayout.Label($"Shots {totalShots}/{maxShots}");
+            if (GUILayout.Button("Stop")) {
+                initialized = false;
+                for (int i=0; i<totalGhosts; i++) {
+                    Destroy(ghosts[i].GhostBall);
+                }
+            }
         }
         if (winner != null) {
             GUILayout.Label("Winner found!");
@@ -92,20 +130,19 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
     }
 
     static void Initialize() {
-        for (int i=0; i<120; i++) {
-            ghosts[i] = new GhostBallManager(CreateGhostBall(), 0.0f, 3.0f * i);
+        ghosts = new GhostBallManager[totalGhosts];
+        for (int i=0; i<totalGhosts; i++) {
+            ghosts[i] = new GhostBallManager(CreateGhostBall(), 0.0f, minAngle + i * ((maxAngle - minAngle) / totalGhosts));
         }
         holes = GameObject.FindGameObjectsWithTag("Hole").ToArray<GameObject>();
         resetPosition = Services.GameState.CurrentState.Cast<GameplayGameState>().m_PrimaryUser.Ball.gameObject.transform.position;
         winner = null;
         totalShots = 0;
-        maxShots = 16 * 120;
+        maxShots = powerSteps * totalGhosts;
         initialized = true;
     }
 
     // Creates a GhostBall
-    // maybe tag this as "Player" ?
-    // maybe sc stuff changes ?
     static GameObject CreateGhostBall() {
 
         // Create
@@ -120,7 +157,7 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
         rb.angularDrag = 1000.0f;
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.drag = 0.5f;
-        rb.inertiaTensor = new Vector3(0.002f, 0.002f, 0.002f);
+        rb.inertiaTensor = new Vector3(0.00196f, 0.00196f, 0.00196f);
         rb.interpolation = RigidbodyInterpolation.Extrapolate;
         rb.maxAngularVelocity = 10000.0f;
 
@@ -139,17 +176,13 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
 
     // Shoots a GhostBall
     // NOTE: When this function shoots, take note of animation frame of all objects in the world to recreate it.
-    static void ShootGhostBall(GameObject ghost, float power, float angle) {
-
-        // Components
-        Rigidbody rb = ghost.GetComponent<Rigidbody>();
-        SphereCollider sc = ghost.GetComponent<SphereCollider>();
+    static void ShootGhostBall(GhostBallManager ghost, float power, float angle) {
 
         // Contact Offset
-        sc.contactOffset = 0.000005f;
+        ghost.sc.contactOffset = 0.000005f;
 
         // Angular Drag
-        rb.angularDrag = 1.0f;
+        ghost.rb.angularDrag = 1.0f;
 
         // Magnitude (this appears to just be the power)
         float magnitude = power;
@@ -159,37 +192,31 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
         force.x = Mathf.Cos(angle * Mathf.Deg2Rad);
         force.z = Mathf.Sin(angle * Mathf.Deg2Rad);
         force *= magnitude + 1.0f;
-        rb.AddForce(force, ForceMode.Force);
+        ghost.rb.AddForce(force, ForceMode.Force);
     }
 
     // Updates a GhostBall
     // TODO: If the ball collides with a reset trigger, flag it for reset.
-    static void UpdateGhostBall(GameObject ghost) {
-        
-        // Components
-        Rigidbody rb = ghost.GetComponent<Rigidbody>();
-        SphereCollider sc = ghost.GetComponent<SphereCollider>();
-
-        // Angular Drag Update
-        float speed = rb.velocity.magnitude;
+    static void UpdateGhostBall(GhostBallManager ghost) {
+        float speed = ghost.rb.velocity.magnitude;
         if (speed <= 1.0f) {
-            rb.angularDrag = (1.0f - speed) * (1.0f - speed) * 40.0f;
-            sc.contactOffset = 0.0005f;
+            ghost.rb.angularDrag = (1.0f - speed) * (1.0f - speed) * 40.0f;
+            ghost.sc.contactOffset = 0.0005f;
         } else {
-            rb.angularDrag = 1.0f;
-            sc.contactOffset = 0.000005f;
+            ghost.rb.angularDrag = 1.0f;
+            ghost.sc.contactOffset = 0.000005f;
         }
     }
 
     // Helper Function
-    static bool IsGhostBallIdle(GameObject ghost) {
-        return (ghost.GetComponent<Rigidbody>().velocity.magnitude <= 0.01f);
+    static bool IsGhostBallIdle(GhostBallManager ghost) {
+        return (ghost.rb.velocity.magnitude <= 0.01f);
     }
 
     // Helper Function
-    static bool IsGhostBallInHole(GameObject ghost) {
+    static bool IsGhostBallInHole(GhostBallManager ghost) {
         for (int i=0; i<holes.Length; i++) {
-            if (holes[i].GetComponent<Collider>().bounds.Contains(ghost.transform.position)) {
+            if (holes[i].GetComponent<Collider>().bounds.Contains(ghost.GhostBall.transform.position)) {
                 return true;
             }
         }
@@ -206,10 +233,16 @@ public class GhostBallManager {
     public float Power;
     public float Angle;
 
+    // Components
+    public Rigidbody rb;
+    public SphereCollider sc;
+
     public GhostBallManager(GameObject GhostBall, float Power, float Angle) {
         this.GhostBall = GhostBall;
         this.Power = Power;
         this.Angle = Angle;
+        this.rb = GhostBall.GetComponent<Rigidbody>();
+        this.sc = GhostBall.GetComponent<SphereCollider>();
     }
 
 }
