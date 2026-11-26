@@ -29,12 +29,16 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
     private static string minAngleField = "0";
     private static string maxAngleField = "360";
     private static string powerStepsField = "16";
+    private static string minPowerField = "0";
+    private static string maxPowerField = "10500";
 
     // Config
     private static int totalGhosts = 120;
-    private static float minAngle = 0;
-    private static float maxAngle = 360;
+    private static float minAngle = 0.0f;
+    private static float maxAngle = 360.0f;
     private static int powerSteps = 16;
+    private static float minPower = 0.0f;
+    private static float maxPower = 10500.0f;
 
     void Update() {
         if (State.isInGame) {
@@ -54,10 +58,10 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
                     // If idle, reset and shoot again with more power (first trying 16ths)
                     if (IsGhostBallIdle(ghosts[i])) {
                         ghosts[i].GhostBall.transform.position = resetPosition;
-                        ghosts[i].Power += 10500.0f / (float)powerSteps;
+                        ghosts[i].Power += (maxPower - minPower) / (float)powerSteps;
                         ghosts[i].rb.velocity = Vector3.zero;
                         ghosts[i].rb.angularVelocity = Vector3.zero;
-                        if (ghosts[i].Power <= 10500.0f) {
+                        if (ghosts[i].Power <= maxPower) {
                             ShootGhostBall(ghosts[i], ghosts[i].Power, ghosts[i].Angle);
                             totalShots++;
                         } else {
@@ -101,12 +105,18 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
             maxAngleField = GUILayout.TextField(maxAngleField);
             GUILayout.Label("Power Steps:");
             powerStepsField = GUILayout.TextField(powerStepsField);
+            GUILayout.Label("Power Bound Min:");
+            minPowerField = GUILayout.TextField(minPowerField);
+            GUILayout.Label("Power Bound Max:");
+            maxPowerField = GUILayout.TextField(maxPowerField);
         }
         if (!initialized && GUILayout.Button("Search")) {
             totalGhosts = int.Parse(totalGhostsField);
             minAngle = float.Parse(minAngleField);
             maxAngle = float.Parse(maxAngleField);
             powerSteps = int.Parse(powerStepsField);
+            minPower = float.Parse(minPowerField);
+            maxPower = float.Parse(maxPowerField);
             Initialize();
         }
         if (initialized) {
@@ -132,7 +142,7 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
     static void Initialize() {
         ghosts = new GhostBallManager[totalGhosts];
         for (int i=0; i<totalGhosts; i++) {
-            ghosts[i] = new GhostBallManager(CreateGhostBall(), 0.0f, minAngle + i * ((maxAngle - minAngle) / totalGhosts));
+            ghosts[i] = new GhostBallManager(CreateGhostBall(), minPower, minAngle + i * ((maxAngle - minAngle) / totalGhosts));
         }
         holes = GameObject.FindGameObjectsWithTag("Hole").ToArray<GameObject>();
         resetPosition = Services.GameState.CurrentState.Cast<GameplayGameState>().m_PrimaryUser.Ball.gameObject.transform.position;
