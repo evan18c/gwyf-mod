@@ -31,6 +31,7 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
     private static string powerStepsField = "16";
     private static string minPowerField = "0";
     private static string maxPowerField = "10500";
+    private static string timeScaleField = "2";
 
     // Config
     private static int totalGhosts = 120;
@@ -39,15 +40,26 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
     private static int powerSteps = 16;
     private static float minPower = 0.0f;
     private static float maxPower = 10500.0f;
+    private static float timeScale = 2.0f;
 
     void Update() {
         if (State.isInGame) {
             if (initialized) {
+
+                // Loop through all balls
+                bool completed = true;
                 for (int i=0; i<totalGhosts; i++) {
+
+                    // Skip Done ball
+                    if (ghosts[i].Done) {
+                        continue;
+                    }
+                    completed = false;
 
                     // If in hole, set winner and cleanup
                     if (IsGhostBallInHole(ghosts[i])) {
                         winner = ghosts[i];
+                        Time.timeScale = 1.0f;
                         initialized = false;
                         for (int j=0; j<totalGhosts; j++) {
                             Destroy(ghosts[j].GhostBall);
@@ -55,7 +67,7 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
                         break;
                     }
 
-                    // If idle, reset and shoot again with more power (first trying 16ths)
+                    // If idle, reset and shoot again with more power
                     if (IsGhostBallIdle(ghosts[i])) {
                         ghosts[i].GhostBall.transform.position = resetPosition;
                         ghosts[i].Power += (maxPower - minPower) / (float)powerSteps;
@@ -65,16 +77,20 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
                             ShootGhostBall(ghosts[i], ghosts[i].Power, ghosts[i].Angle);
                             totalShots++;
                         } else {
-                            if (totalShots == maxShots) {
-                                for (int j=0; j<totalGhosts; j++) {
-                                    Destroy(ghosts[j].GhostBall);
-                                }
-                                initialized = false;
-                                break;
-                            }
+                            ghosts[i].Done = true;
                         }
                     }
                 }
+                
+                // Cleanup
+                if (completed) {
+                    for (int i=0; i<totalGhosts; i++) {
+                        Destroy(ghosts[i].GhostBall);
+                    }
+                    Time.timeScale = 1.0f;
+                    initialized = false;
+                }
+
             }
         } else {
             initialized = false;
@@ -109,6 +125,8 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
             minPowerField = GUILayout.TextField(minPowerField);
             GUILayout.Label("Power Bound Max:");
             maxPowerField = GUILayout.TextField(maxPowerField);
+            GUILayout.Label("Time Scale:");
+            timeScaleField = GUILayout.TextField(timeScaleField);
         }
         if (!initialized && GUILayout.Button("Search")) {
             totalGhosts = int.Parse(totalGhostsField);
@@ -117,6 +135,7 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
             powerSteps = int.Parse(powerStepsField);
             minPower = float.Parse(minPowerField);
             maxPower = float.Parse(maxPowerField);
+            timeScale = float.Parse(timeScaleField);
             Initialize();
         }
         if (initialized) {
@@ -126,6 +145,7 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
                 for (int i=0; i<totalGhosts; i++) {
                     Destroy(ghosts[i].GhostBall);
                 }
+                Time.timeScale = 1.0f;
             }
         }
         if (winner != null) {
@@ -149,6 +169,7 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
         winner = null;
         totalShots = 0;
         maxShots = powerSteps * totalGhosts;
+        Time.timeScale = timeScale;
         initialized = true;
     }
 
@@ -168,7 +189,6 @@ public class ModHoleInOneBruteforcer : MonoBehaviour {
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.drag = 0.5f;
         rb.inertiaTensor = new Vector3(0.00196f, 0.00196f, 0.00196f);
-        rb.interpolation = RigidbodyInterpolation.Extrapolate;
         rb.maxAngularVelocity = 10000.0f;
 
         // SphereCollider
@@ -242,6 +262,7 @@ public class GhostBallManager {
     public GameObject GhostBall;
     public float Power;
     public float Angle;
+    public bool Done;
 
     // Components
     public Rigidbody rb;
@@ -251,6 +272,7 @@ public class GhostBallManager {
         this.GhostBall = GhostBall;
         this.Power = Power;
         this.Angle = Angle;
+        this.Done = false;
         this.rb = GhostBall.GetComponent<Rigidbody>();
         this.sc = GhostBall.GetComponent<SphereCollider>();
     }
